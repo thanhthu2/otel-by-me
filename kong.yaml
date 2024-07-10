@@ -1,0 +1,18 @@
+_format_version: "2.1"
+
+
+services:
+  #
+  # POST
+  #
+  - name: be-app
+    url: http://host.docker.internal:6000/api/data
+    plugins:
+      - name: cors
+        config:
+          origins:
+            - "*"
+    routes:
+      - name: be-app
+        paths:
+          - /api/data
