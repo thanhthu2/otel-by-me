@@ -5,17 +5,17 @@ receivers:
 
 exporters:
   logging:
-    loglevel: debug  # Cấu hình log level cho exporter logging
+    loglevel: debug 
   otlp:
-    endpoint: "http://tempo:4318/v1/traces"  # Địa chỉ và endpoint của OTLP Exporter
+    endpoint: "http://tempo:4318/v1/traces" 
     tls:
-      insecure: true  # Sử dụng kết nối không an toàn (chỉ dùng cho môi trường phát triển)
+      insecure: true  
 
 service:
   pipelines:
     traces:
       receivers: [otlp]
       processors: []
-      exporters: [logging, otlp]  # Cấu hình exporter sẽ sử dụng cho pipelines traces
+      exporters: [logging, otlp] 
 
-extensions:  # Các extension có thể được cấu hình ở đây nếu cần thiết
+extensions:

@@ -1,4 +1,4 @@
-# Dockerfile for be-app
+# Dockerfile for fe-app
 FROM node:16-alpine
 
 WORKDIR /app
@@ -9,7 +9,8 @@ RUN npm install
 
 COPY . .
 
-CMD node index.js
+RUN npm run build
 
 EXPOSE 3000
 
+CMD ["npx", "serve", "-s", "build", "-l", "3000"]

@@ -2,10 +2,11 @@ version: '2.1'
 
 networks:
   kong-net:
-  
+
+
 services:
 
-   #######################################
+  #######################################
   # Postgres: The database used by Kong
   #######################################
   kong-database:
@@ -18,32 +19,28 @@ services:
     networks:
       - kong-net
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "kong"]
+      test: [ "CMD", "pg_isready", "-U", "kong" ]
       interval: 10s
       timeout: 5s
       retries: 5
-    restart: on-failure
-
-     #######################################
+    restart: on-failure #######################################
   # Kong database migration
   #######################################
-  kong-migrations:
-    image: kong:latest
-    command: kong migrations bootstrap && kong migrations up && kong migrations finish
-    depends_on:
-      kong-database:
-        condition: service_healthy
-    environment:
-      KONG_DATABASE: postgres
-      KONG_PG_HOST: kong-db
-      KONG_PG_USER: kong
-      KONG_PG_PASSWORD: kong
-      KONG_PG_DATABASE: kong
-    networks:
-      - kong-net
-    restart: on-failure
-
-      #######################################
+  # kong-migrations:
+  #   image: kong:latest
+  #   command: kong migrations bootstrap && kong migrations up && kong migrations finish
+  #   depends_on:
+  #     kong-database:
+  #       condition: service_healthy
+  #   environment:
+  #     KONG_DATABASE: postgres
+  #     KONG_PG_HOST: kong-db
+  #     KONG_PG_USER: kong
+  #     KONG_PG_PASSWORD: kong
+  #     KONG_PG_DATABASE: kong
+  #   networks:
+  #     - kong-net
+  #   restart: on-failure #######################################
   # Kong: The API Gateway
   #######################################
   kong:
@@ -56,6 +53,14 @@ services:
       KONG_DECLARATIVE_CONFIG: /usr/local/kong/declarative/kong.yaml
       KONG_DATABASE: off
       KONG_PLUGINS: opentelemetry, cors
+      KONG_LOG_LEVEL: debug
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_OPENTELEMETRY_TRACING: all
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_TRACING_SAMPLING_RATE: 1
+      # TRACING_SAMPLING_RATE:
 
     volumes:
       - ./kong.yaml:/usr/local/kong/declarative/kong.yaml
@@ -65,35 +70,28 @@ services:
       - "8000:8000"
       - "8001:8001"
     healthcheck:
-      test: ["CMD", "kong", "health"]
+      test: [ "CMD", "kong", "health" ]
       interval: 10s
       timeout: 10s
       retries: 10
     restart: on-failure
-  
+
   otel-collector:
     image: otel/opentelemetry-collector:0.61.0
     command: [ "--config=/etc/otel-collector.yaml" ]
     volumes:
       - ./etc/otel-collector.yaml:/etc/otel-collector.yaml
     ports:
-      - "1888:1888"   # pprof extension
-      - "8888:8888"   # Prometheus metrics exposed by the collector
-      - "8889:8889"   # Prometheus exporter metrics
+      - "1888:1888" # pprof extension
+      - "8888:8888" # Prometheus metrics exposed by the collector
+      - "8889:8889" # Prometheus exporter metrics
       - "13133:13133" # health_check extension
-      - "4317:4317"   # OTLP gRPC receiver
-      - "4318:4318"   # OTLP HTTP receiver
+      - "4317:4317" # OTLP gRPC receiver
+      - "4318:4318" # OTLP HTTP receiver
       - "55679:55679" # zpages extension
     depends_on:
       - tempo
-      - prometheus
-    networks:
-      - kong-net
-      
-  be-app:
-    build: ./be-app
-    ports:
-      - "6000:6000"
+      # - prometheus
     networks:
       - kong-net
 
@@ -105,54 +103,53 @@ services:
       # - tempo-data:/tmp/tempo
     ports:
       - "14268" # jaeger ingest
-      - "3200"  # tempo
-      - "4317"  # otlp grpc
-      - "4318"  # otlp http
-      - "9411"  # zipkin
+      - "3200" # tempo
+      - "4317" # otlp grpc
+      - "4318" # otlp http
+      - "9411" # zipkin
     networks:
       - kong-net
 
-  loki:
-    image: grafana/loki:2.8.5
-    command: -config.file=/etc/loki/loki.yaml
-    ports:
-      - "3100:3100" # loki needs to be exposed so it receives logs
-    environment:
-      - JAEGER_AGENT_HOST=tempo
-      - JAEGER_ENDPOINT=http://tempo:14268/api/traces # send traces to Tempo
-      - JAEGER_SAMPLER_TYPE=const
-      - JAEGER_SAMPLER_PARAM=1
-    volumes:
-      - ./etc/loki.yaml:/etc/loki/loki.yaml
-    #   - loki-data:/tmp/loki
-    networks:
-      - kong-net
+  # loki:
+  #   image: grafana/loki:2.8.5
+  #   command: -config.file=/etc/loki/loki.yaml
+  #   ports:
+  #     - "3100:3100" # loki needs to be exposed so it receives logs
+  #   environment:
+  #     - JAEGER_AGENT_HOST=tempo
+  #     - JAEGER_ENDPOINT=http://tempo:14268/api/traces # send traces to Tempo
+  #     - JAEGER_SAMPLER_TYPE=const
+  #     - JAEGER_SAMPLER_PARAM=1
+  #   volumes:
+  #     - ./etc/loki.yaml:/etc/loki/loki.yaml
+  #   #   - loki-data:/tmp/loki
+  #   networks:
+  #     - kong-net
 
-  promtail:
-    image: grafana/promtail:2.9.0
-    volumes:
-      - ./etc/promtail-config.yaml:/etc/promtail/config.yaml:ro
-      - /var/run/docker.sock:/var/run/docker.sock
-    command: -config.file=/etc/promtail/config.yaml
-    depends_on:
-      - loki
-    networks:
-      - kong-net
+  # promtail:
+  #   image: grafana/promtail:2.9.0
+  #   volumes:
+  #     - ./etc/promtail-config.yaml:/etc/promtail/config.yaml:ro
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #   command: -config.file=/etc/promtail/config.yaml
+  #   depends_on:
+  #     - loki
+  #   networks:
+  #     - kong-net
 
-  prometheus:
-    image: prom/prometheus:latest
-    volumes:
-      - ./etc/prometheus.yaml:/etc/prometheus.yaml
-    command:
-      - --config.file=/etc/prometheus.yaml
-      - --web.enable-remote-write-receiver
-      - --enable-feature=exemplar-storage
-      - --enable-feature=remote-write-receiver
-    ports:
-      - "9090:9090"
-    networks:
-      - kong-net
-
+  # prometheus:
+  #   image: prom/prometheus:latest
+  #   volumes:
+  #     - ./etc/prometheus.yaml:/etc/prometheus.yaml
+  #   command:
+  #     - --config.file=/etc/prometheus.yaml
+  #     - --web.enable-remote-write-receiver
+  #     - --enable-feature=exemplar-storage
+  #     - --enable-feature=remote-write-receiver
+  #   ports:
+  #     - "9090:9090"
+  #   networks:
+  #     - kong-net
 
   grafana:
     image: grafana/grafana:10.3.3
@@ -167,15 +164,8 @@ services:
     ports:
       - "3002:3000"
     depends_on:
-      - prometheus
+      # - prometheus
       - tempo
-      - loki
-    networks:
-      - kong-net
-
-  fe-app:
-    build: ./fe-app
-    ports:
-      - "3000:3000"
+      # - loki
     networks:
       - kong-net
